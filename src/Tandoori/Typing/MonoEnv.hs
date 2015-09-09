@@ -1,23 +1,23 @@
 module Tandoori.Typing.MonoEnv (MonoEnv, noVars, justType, setMonoSrc, getMonoSrc, getMonoTy, setMonoTy, mapMonoM, mapMonoM', getMonoVars, getMonoPreds, getMonoVar, addMonoVar, filterMonoVars, filterMonoPreds, combineMonos) where
 
-import Prelude hiding (mapM)
-import Tandoori
-import Tandoori.GHC.Internals (SDoc)
-import Tandoori.Typing
+import           Prelude                hiding (mapM)
+import           Tandoori
+import           Tandoori.GHC.Internals (SDoc)
+import           Tandoori.Typing
 
-import Data.Monoid    
-import Data.Set (Set)
-import qualified Data.Set as Set
-import Data.Map (Map)
-import qualified Data.Map as Map
-import Data.Traversable (mapM)
-import Control.Monad (liftM)
+import           Control.Monad          (liftM)
+import           Data.Map               (Map)
+import qualified Data.Map               as Map
+import           Data.Monoid
+import           Data.Set               (Set)
+import qualified Data.Set               as Set
+import           Data.Traversable       (mapM)
 
-data MonoEnv = MonoEnv{ 
-  source :: Maybe SDoc,
-  ty :: Maybe Ty,
-  monovars :: Map VarName Ty, 
-  preds :: Set PolyPred
+data MonoEnv = MonoEnv{
+  source   :: Maybe SDoc,
+  ty       :: Maybe Ty,
+  monovars :: Map VarName Ty,
+  preds    :: Set PolyPred
   }
 
 setMonoSrc m src = m{ source = Just src }
@@ -29,7 +29,7 @@ setMonoTy m τ = m{ty = Just τ}
 empty :: PolyTy -> MonoEnv
 empty σ@(PolyTy ctx τ) = MonoEnv{ source = Nothing,
                                   ty = Just τ,
-                                  monovars = mempty, 
+                                  monovars = mempty,
                                   preds = Set.fromList ctx}
 
 noVars :: MonoEnv
@@ -40,7 +40,7 @@ justType σ@(PolyTy ctx τ) = (empty σ, τ)
 
 typedAs :: VarName -> PolyTy -> (MonoEnv, Ty)
 x `typedAs` σ@(PolyTy ctx τ) = (addMonoVar (empty σ) (x, σ), τ)
-                
+
 addMonoVar :: MonoEnv -> (VarName, PolyTy) -> MonoEnv
 addMonoVar m (x, σ@(PolyTy ctx τ)) = m{monovars = Map.insert x τ (monovars m), preds = Set.fromList ctx `Set.union` (preds m) }
 

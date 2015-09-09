@@ -1,12 +1,12 @@
 module Tandoori.Typing.Substitute where
 -- module Tandoori.Ty.Substitute (Substitution, substCTy, addSubst, emptySubst, substTy) where
 
-import Tandoori.Typing
-import Control.Monad
-import Control.Monad.RWS
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-    
+import           Control.Monad
+import           Control.Monad.RWS
+import qualified Data.Map          as Map
+import qualified Data.Set          as Set
+import           Tandoori.Typing
+
 newtype Subst = S (Map.Map Tv Ty)
 
 emptySubst :: Subst
@@ -27,6 +27,6 @@ substTyM (TyFun τ1 τ2) = liftM2 TyFun (substTyM τ1) (substTyM τ2)
 substTyM (TyApp τ1 τ2) = liftM2 TyApp (substTyM τ1) (substTyM τ2)
 substTyM τ@(TyCon _) = return τ
 substTyM τ@(TyTuple _) = return τ
-                         
+
 substTy :: Subst -> Ty -> Ty
 substTy s τ = fst $ evalRWS (substTyM τ) s ()

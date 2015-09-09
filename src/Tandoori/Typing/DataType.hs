@@ -1,14 +1,14 @@
 module Tandoori.Typing.DataType (constructorsFromDecl) where
 
-import Tandoori
-import Tandoori.Typing
-import Tandoori.Typing.Error
-import Tandoori.Typing.Monad
-import Tandoori.GHC.Internals
-import Tandoori.Typing.Repr
-    
-import Control.Monad
-    
+import           Tandoori
+import           Tandoori.GHC.Internals
+import           Tandoori.Typing
+import           Tandoori.Typing.Error
+import           Tandoori.Typing.Monad
+import           Tandoori.Typing.Repr
+
+import           Control.Monad
+
 constructorsFromDecl :: TyClDecl Name -> Typing [(ConName, Ty)]
 constructorsFromDecl decl | isDataDecl decl  = do
   let nameData = tcdName decl

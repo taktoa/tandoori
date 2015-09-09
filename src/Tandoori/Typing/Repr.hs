@@ -1,17 +1,17 @@
 module Tandoori.Typing.Repr (fromHsType) where
 
-import Tandoori.Typing
-import Tandoori.Typing.Monad
-import Tandoori.Typing.Error
-import Tandoori.GHC.Internals as GHC
-    
-import qualified TyCon as GHC
-import qualified TypeRep as GHC
+import           Tandoori.GHC.Internals as GHC
+import           Tandoori.Typing
+import           Tandoori.Typing.Error
+import           Tandoori.Typing.Monad
 
-import Control.Applicative
-import Control.Monad.Writer (lift, tell, WriterT, runWriterT)
+import qualified TyCon                  as GHC
+import qualified TypeRep                as GHC
 
-    
+import           Control.Applicative
+import           Control.Monad.Writer   (WriterT, lift, runWriterT, tell)
+
+
 fromHsType :: GHC.HsType GHC.Name -> Typing PolyTy
 fromHsType ty = do (τ, ctx) <- runWriterT $ fromHsType' ty
                    return $ PolyTy ctx τ
@@ -43,6 +43,6 @@ fromHsType' (GHC.HsForAllTy _ _ lctxt lty)    = do tell =<< mapM (toPolyPred . u
           toPolyPred pred@(GHC.HsClassP cls [L _ τ]) = lift $ raiseError $ OtherError "Predicates should only have type variables for parameters"
           toPolyPred pred@(GHC.HsClassP cls _)       = lift $ raiseError $ OtherError "Predicate with more than one type parameter"
           toPolyPred pred                            = lift $ raiseError $ OtherError "Unsupported predicate"
-                                                 
-                                             
-                                  
+
+
+

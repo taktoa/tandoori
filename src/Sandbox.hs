@@ -1,41 +1,41 @@
-module Main where
+module Sandbox where
 
-import Tandoori.GHC    
-import Tandoori.GHC.Parse
-import Tandoori.GHC.Scope
+import           Tandoori.GHC
+import           Tandoori.GHC.Parse
+import           Tandoori.GHC.Scope
 -- import Tandoori.Kludge.Show
 
-import Tandoori.Typing.Monad
-    
-import GHC    
-import RdrHsSyn
-import Outputable
-import IOEnv
+import           Tandoori.Typing.Monad
 
-import System.Environment    
-    
-import Tandoori.Typing.Infer
-import Tandoori.Typing.Ctxt
-import Tandoori.Typing
-import Tandoori.Typing.Show
-import Tandoori.Typing.MonoEnv
-    
+import           GHC
+import           IOEnv
+import           Outputable
+import           RdrHsSyn
+
+import           System.Environment
+
+import           Tandoori.Typing
+import           Tandoori.Typing.Ctxt
+import           Tandoori.Typing.Infer
+import           Tandoori.Typing.MonoEnv
+import           Tandoori.Typing.Show
+
 -- import Tandoori.Typing.DataType
 -- import Tandoori.Typing.ClassDecl
 -- import Tandoori.Typing.InstanceDecl
-    
-import qualified Data.Map as Map
-import Control.Monad.Writer (runWriterT)
-import Control.Monad (liftM)
-    
+
+import           Control.Monad           (liftM)
+import           Control.Monad.Writer    (runWriterT)
+import qualified Data.Map                as Map
+
 -- import IPPrint
 
 --
-import Tandoori.Typing.Unify
-import Tandoori.GHC.Internals
-import Bag
+import           Bag
+import           Tandoori.GHC.Internals
+import           Tandoori.Typing.Unify
 --
-    
+
 src_filename = "input/declare.hs"
 
 typecheckMod mod = runDyn $ do
@@ -52,7 +52,7 @@ typecheckMod mod = runDyn $ do
                          -- printTest pred@(HsClassP cls [(L _ ty)]) = liftIO $ putStrLn $ unwords ["baseInstancesOf", show cls, show ty,
                          --                                                                         "=",
                          --                                                                         show $ baseInstancesOf instmap pred]
-                                 
+
                      -- liftIO $ print cls
                      -- liftIO $ mapM_ print linstdecls
                      -- mapM_ printTest [pred, pred']
@@ -61,7 +61,7 @@ typecheckMod mod = runDyn $ do
                      --          liftM fst $ inferValBinds (hs_valds group)
                      -- return $ runTyping ltydecls linstdecls $ infer
                      return $ infer (map unLoc ltydecls) group
-                                                                    
+
 main' [src_filename] = do mod <- parseMod src_filename
                           (c, errors) <- typecheckMod mod
                           if not(null errors)
@@ -72,13 +72,13 @@ main' [src_filename] = do mod <- parseMod src_filename
                             Nothing -> return ()
                           return c
 
-main' _ = error "Usage: tandoori filename.hs" 
+main' _ = error "Usage: tandoori filename.hs"
 
 main = do args <- getArgs
           main' args
-          
-test = main' [src_filename]                
-                
+
+test = main' [src_filename]
+
 -- test = do p <- main' ["input/cikk.hs"]
 --           let tyFoo = snd $ snd $ (Map.toList $ polyVars p)!!0
 --               ltyId = snd $ (Map.toList $ userdecls p)!!1

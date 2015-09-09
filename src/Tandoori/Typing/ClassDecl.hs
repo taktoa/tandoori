@@ -1,18 +1,18 @@
 module Tandoori.Typing.ClassDecl (classMap) where
 
-import Tandoori.Typing
-import Tandoori.Typing.Monad
-import Tandoori.Typing.Error
-import Tandoori.GHC.Internals
-import Tandoori.Typing.Repr
+import           Tandoori.GHC.Internals
+import           Tandoori.Typing
+import           Tandoori.Typing.Error
+import           Tandoori.Typing.Monad
+import           Tandoori.Typing.Repr
 
-import Control.Monad.Error
-import Control.Applicative
+import           Control.Applicative
+import           Control.Monad.Error
 
-import qualified Data.Map as Map    
-import qualified Data.Graph as G
-import qualified Data.Tree as T
-    
+import qualified Data.Graph             as G
+import qualified Data.Map               as Map
+import qualified Data.Tree              as T
+
 -- TODO: move to separate module
 classMap :: [TyClDecl Name] -> Typing [(Cls, ClsInfo)]
 classMap decls = do (g, fromVertex) <- classGraph decls
@@ -39,7 +39,7 @@ classGraph decls = do (g, fromVertex, toVertex) <- G.graphFromEdges <$> edges
                       let clsFromVertex v = let (cls, _, _) = fromVertex v in cls
                       return (g, clsFromVertex)
     where decls' = filter isClassDecl decls
-          edges = mapM edgesFromDecl decls'                  
+          edges = mapM edgesFromDecl decls'
           edgesFromDecl decl = do checkCtx
                                   return (decl, cls, map fst ctx)
               where cls = tcdName decl
@@ -49,5 +49,5 @@ classGraph decls = do (g, fromVertex, toVertex) <- G.graphFromEdges <$> edges
                     checkCtx = forM_ ctx $ \ (cls', α') ->
                                  unless (α' == α) $
                                    raiseError $ InvalidClassCtx (cls, α) (cls', α')
-                                              
-                             
+
+

@@ -1,23 +1,27 @@
-{-# LANGUAGE StandaloneDeriving, FlexibleInstances, TypeSynonymInstances, FlexibleContexts, UndecidableInstances #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Tandoori.Kludge.Show where
 
-import RdrName
-import OccName
-import Name
-import GHC
-import BasicTypes    
-import Bag   
-import TypeRep
-import UniqFM
-import ForeignCall
-import SrcLoc
-import Outputable
-import NameSet
-    
+import           Bag
+import           BasicTypes
+import           ForeignCall
+import           GHC
+import           Name
+import           NameSet
+import           OccName
+import           Outputable
+import           RdrName
+import           SrcLoc
+import           TypeRep
+import           UniqFM
+
 instance Show a => Show (Located a) where
     show lx = "(L " ++ show (unLoc lx) ++ ")"
-    
+
 -- instance Show id => (Show (HsDecl id)) where
 --     show (TyClD tyClDecl) = "TyClD"
 --     show (InstD _) = "InstD"
@@ -30,7 +34,7 @@ deriving instance Show (HsTupArg Id)
 -- deriving instance Show (HsBind Id)
 deriving instance Show DocDecl
 -- deriving instance (Show a, Show b) => Show (HsBindLR a b)
-deriving instance Show (HsBindLR Name Name)         
+deriving instance Show (HsBindLR Name Name)
 deriving instance Show (HsBindLR Id Id)
 -- deriving instance (Show a, Show b) => Show (StmtLR a b)
 deriving instance Show (StmtLR Name Name)
@@ -106,10 +110,10 @@ deriving instance Show Prag
 deriving instance Show OverLitVal
 deriving instance Show HsLit
 deriving instance Show Boxity
-deriving instance Show InlineSpec        
-deriving instance Show Activation         
+deriving instance Show InlineSpec
+deriving instance Show Activation
 -- deriving instance Show Type
-deriving instance Show PredType         
+deriving instance Show PredType
 deriving instance Show ForeignImport
 deriving instance Show ForeignExport
 deriving instance Show CExportSpec
@@ -151,7 +155,7 @@ deriving instance Show (AnnProvenance Name)
 deriving instance Show (AnnProvenance Id)
 deriving instance Show InlinePragma
 deriving instance Show RuleMatchInfo
-deriving instance Show (HsType Name)         
+deriving instance Show (HsType Name)
 
 instance Show PostTcType where
     show _ = "⊥"
@@ -159,18 +163,18 @@ instance Show PostTcType where
 instance Show Name where
     show = showNameShort
 
-showNameShort qname = show $ occNameString $ nameOccName qname           
-           
+showNameShort qname = show $ occNameString $ nameOccName qname
+
 showNameQual qname = show $ modulename ++ "." ++ name ++ "#" ++ uname
     where name = occNameString $ nameOccName qname
           modulename = case nameModule_maybe qname of
                          Nothing -> "?"
                          Just m  -> moduleNameString $ moduleName m
-          uname = show $ nameUnique qname         
-         
+          uname = show $ nameUnique qname
+
 instance (Show NameSet) where
     show nameset = show (nameSetToList nameset)
-         
+
 -- instance (Show (HsType Name)) where
 -- --     -- show (HsTyVar x) = showNameShort x
 -- --     -- show (HsFunTy ty ty') = "(" ++ unwords [(show ty), "->", (show  ty')] ++ ")"
@@ -179,16 +183,16 @@ instance (Show NameSet) where
 -- --     --           joinWith sep [x] = x
 -- --     --           joinWith sep (x:xs) = x ++ sep ++ (joinWith sep xs)
 --     show ty = showSDoc $ ppr ty
-         
+
 instance (Show TyCon) where
     show _ = "TyCon"
 
 instance (Show (Match id)) => (Show (MatchGroup id)) where
     show (MatchGroup lms ptt) = unwords ["MatchGroup", show lms, "PostTcType"]
-             
+
 instance (Show SrcSpan) where
     show _ = "SrcSpan"
-         
+
 instance (Show OccName) where
      show = show . showSDocDump . ppr
 
@@ -207,7 +211,7 @@ showList' (s:ss) = "[" ++ s ++ (concat $ map (',':) ss) ++ "]"
 
 instance (Show a) => Show (Bag a) where
     show b = unwords ["Bag", show $ bagToList b]
-                   
+
 instance (Show (HsBind id)) => (Show (HsValBinds id)) where
     show (ValBindsIn binds sigs) = "ValBindsIn"
     show (ValBindsOut reclbinds lsigs) = unwords ["ValBindsOut", (showList' $ map showRecBinds reclbinds), (show lsigs)]
@@ -217,4 +221,4 @@ instance (Show (HsBind id)) => (Show (HsValBinds id)) where
 
 instance (Show ModuleName) where
     show = moduleNameString
-                                 
+

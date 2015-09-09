@@ -1,9 +1,10 @@
 module Tandoori.GHC (runDyn) where
 
-import GHC (runGhc, getSessionDynFlags, setSessionDynFlags, defaultErrorHandler)
-import GHC.Paths (libdir)
-import DynFlags (defaultDynFlags)
-    
+import           DynFlags  (defaultDynFlags)
+import           GHC       (defaultErrorHandler, getSessionDynFlags, runGhc,
+                            setSessionDynFlags)
+import           GHC.Paths (libdir)
+
 runDyn m = defaultErrorHandler defaultDynFlags $ do
              runGhc (Just libdir) $ do
                --newSession

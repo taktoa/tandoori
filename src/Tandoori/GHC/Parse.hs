@@ -1,13 +1,13 @@
-module Tandoori.GHC.Parse (parseMod, getDecls) where    
+module Tandoori.GHC.Parse (parseMod, getDecls) where
 
-import Tandoori.GHC.Internals    
-    
-import HsSyn (hsmodDecls)
-import Parser (parseModule)
-import Lexer (unP, mkPState, ParseResult(..))
-import StringBuffer (hGetStringBuffer)
-import DynFlags (defaultDynFlags)
-    
+import           Tandoori.GHC.Internals
+
+import           DynFlags               (defaultDynFlags)
+import           HsSyn                  (hsmodDecls)
+import           Lexer                  (ParseResult (..), mkPState, unP)
+import           Parser                 (parseModule)
+import           StringBuffer           (hGetStringBuffer)
+
 getDecls mod = hsmodDecls $ unLoc mod
 
 parseMod src_filename = do buf <- hGetStringBuffer src_filename

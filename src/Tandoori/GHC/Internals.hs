@@ -9,26 +9,29 @@ module Tandoori.GHC.Internals
      module HsTypes,
      module HsPat,
      module HsLit,
-     module HsBinds,        
+     module HsBinds,
      module DataCon,
      module TysWiredIn,
      module PrelNames,
      module HsDecls,
      module Module) where
 
-import SrcLoc
-import Outputable
-import Name
-import BasicTypes
-import Unique
-import FastString
-import HsExpr
-import HsTypes
-import HsPat
-import HsLit
-import HsBinds
-import DataCon (dataConName)
-import TysWiredIn (intTyConName, charTyConName, boolTyConName, listTyConName, tupleTyCon, nilDataCon, consDataCon, trueDataCon, falseDataCon)
-import PrelNames (stringTyConName, eqClassName, ordClassName, numClassName, fractionalClassName)
-import HsDecls
-import Module
+import           BasicTypes
+import           DataCon    (dataConName)
+import           FastString
+import           HsBinds
+import           HsDecls
+import           HsExpr
+import           HsLit
+import           HsPat
+import           HsTypes
+import           Module
+import           Name
+import           Outputable
+import           PrelNames  (eqClassName, fractionalClassName, numClassName,
+                             ordClassName, stringTyConName)
+import           SrcLoc
+import           TysWiredIn (boolTyConName, charTyConName, consDataCon,
+                             falseDataCon, intTyConName, listTyConName,
+                             nilDataCon, trueDataCon, tupleTyCon)
+import           Unique

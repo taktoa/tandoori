@@ -1,11 +1,11 @@
 module Tandoori.Typing.InstanceDecl where
 
-import Tandoori.Typing
-import Tandoori.Typing.Monad
-import Tandoori.GHC.Internals
-import Tandoori.Typing.Repr
-import Tandoori.Typing.Error
-    
+import           Tandoori.GHC.Internals
+import           Tandoori.Typing
+import           Tandoori.Typing.Error
+import           Tandoori.Typing.Monad
+import           Tandoori.Typing.Repr
+
 instDecl :: InstDecl Name -> Typing ((Cls, TyCon), PolyTy)
 instDecl (InstDecl lty binds lsigs _) = withLSrc lty $ do
   (cls, σ) <- case unLoc lty of

@@ -1,25 +1,25 @@
 module Tandoori.Typing.Unify (mgu, fitDeclTy) where
 
-import Tandoori
-import Tandoori.Typing
-import Tandoori.Typing.Monad
-import Tandoori.Typing.Error
-import Control.Monad.Error
-import Tandoori.Typing.Substitute
-    
+import           Control.Monad.Error
+import           Tandoori
+import           Tandoori.Typing
+import           Tandoori.Typing.Error
+import           Tandoori.Typing.Monad
+import           Tandoori.Typing.Substitute
+
 mgu :: [(Maybe VarName, TyEq)] -> ErrorT TypingError Typing Subst
 mgu eqs = mgu' False eqs
 
 fitDeclTy :: Ty -> Ty -> ErrorT TypingError Typing Subst
 fitDeclTy τDecl τ = mgu' True [(Nothing, τ :=: τDecl)]
-    
+
 data Unification  = Skip
                   | Substitute Tv Ty
                   | Recurse [TyEq]
                   | Flip Unification
                   | Incongruent
                   | OccursFailed
-                    
+
 mguEq :: TyEq -> ErrorT TypingError Typing Unification
 mguEq (TyCon d   :=: TyCon d')                     = return $ if d == d' then Skip else Incongruent
 mguEq (TyVar α   :=: TyVar α')       | α == α'     = return Skip
@@ -33,7 +33,7 @@ mguEq (TyApp τ μ :=: TyApp τ' μ')                  = return $ Recurse [τ :=
 mguEq (TyTuple n :=: TyTuple m)      | n == m      = return Skip
 mguEq _                                            = return $ Incongruent
 
-         
+
 mgu' :: Bool -> [(Maybe VarName, TyEq)] -> ErrorT TypingError Typing Subst
 mgu' leftOnly []                    = return emptySubst
 mgu' leftOnly ((src, t :=: t'):eqs) = process False =<< mguEq (t :=: t')

@@ -1,33 +1,36 @@
 module Tandoori.GHC.Scope (runScope) where
 
-import SrcLoc (mkGeneralSrcSpan, unLoc, Located(..))
-import FastString (fsLit)
-import RdrName (RdrName, emptyGlobalRdrEnv, emptyLocalRdrEnv, extendLocalRdrEnvList)
-import RnSource (findSplice, rnSrcDecls, rnTyClDecls)
-import Panic (panic)
-import GHC (emptyRnGroup, emptyLHsBinds, mkModule, mkModuleName, HsModule(..), HsDecl(..))
-import HscTypes (HscEnv, hsc_type_env_var, Warnings(..))
-import HsDecls (LTyClDecl, HsGroup)
-import DriverPhases (HscSource(..))
-import TcRnMonad (TcGblEnv(..), TcLclEnv(..), initTcRnIf)
-import TcRnTypes (ArrowCtxt (..), RecFieldEnv(..), topStage, emptyImportAvails)
-import Name (Name)
-import NameEnv (emptyNameEnv)
-import NameSet (emptyNameSet, emptyDUs)
-import VarSet (emptyVarSet)
-import Data.IORef (newIORef)
-import qualified Data.Set as Set (empty)
-import InstEnv (emptyInstEnv)
-import FamInstEnv (emptyFamInstEnv)
-import Module (mainPackageId)
-import Bag (emptyBag)
-import OccName (emptyOccSet)
-import HsImpExp (LImportDecl)
-    
-import Tandoori.Typing
+import           Bag             (emptyBag)
+import           Data.IORef      (newIORef)
+import qualified Data.Set        as Set (empty)
+import           DriverPhases    (HscSource (..))
+import           FamInstEnv      (emptyFamInstEnv)
+import           FastString      (fsLit)
+import           GHC             (HsDecl (..), HsModule (..), emptyLHsBinds,
+                                  emptyRnGroup, mkModule, mkModuleName)
+import           HscTypes        (HscEnv, Warnings (..), hsc_type_env_var)
+import           HsDecls         (HsGroup, LTyClDecl)
+import           HsImpExp        (LImportDecl)
+import           InstEnv         (emptyInstEnv)
+import           Module          (mainPackageId)
+import           Name            (Name)
+import           NameEnv         (emptyNameEnv)
+import           NameSet         (emptyDUs, emptyNameSet)
+import           OccName         (emptyOccSet)
+import           Panic           (panic)
+import           RdrName         (RdrName, emptyGlobalRdrEnv, emptyLocalRdrEnv,
+                                  extendLocalRdrEnvList)
+import           RnSource        (findSplice, rnSrcDecls, rnTyClDecls)
+import           SrcLoc          (Located (..), mkGeneralSrcSpan, unLoc)
+import           TcRnMonad       (TcGblEnv (..), TcLclEnv (..), initTcRnIf)
+import           TcRnTypes       (ArrowCtxt (..), RecFieldEnv (..),
+                                  emptyImportAvails, topStage)
+import           VarSet          (emptyVarSet)
+
+import           Tandoori.Typing
 
 builtinNames = builtinTyNames ++ builtinDataConNames ++ builtinClassNames
-    
+
 mkLcl = do errs_var <- newIORef (emptyBag, emptyBag)
            tvs_var  <- newIORef emptyVarSet
            return $ TcLclEnv {
@@ -59,7 +62,7 @@ mkGbl env mod = do dfuns_var         <- newIORef emptyNameSet
                                 tcg_fix_env   = emptyNameEnv,
                                 tcg_field_env = RecFields emptyNameEnv emptyNameSet,
                                 tcg_default   = Nothing,
-                                tcg_type_env  = panic "tcg_type_env",                                
+                                tcg_type_env  = panic "tcg_type_env",
                                 tcg_type_env_var = type_env_var,
                                 tcg_inst_env  = emptyInstEnv,
                                 tcg_fam_inst_env  = emptyFamInstEnv,
@@ -69,12 +72,12 @@ mkGbl env mod = do dfuns_var         <- newIORef emptyNameSet
                                 tcg_imports  = emptyImportAvails,
                                 tcg_used_rdrnames = used_rdrnames,
                                 tcg_dus      = emptyDUs,
-                                  
+
                                 tcg_rn_imports = [],
                                 tcg_rn_exports = Just [],
                                 tcg_rn_decls   = Just emptyRnGroup,
-                               
-                                tcg_binds    = emptyLHsBinds,                                
+
+                                tcg_binds    = emptyLHsBinds,
                                 tcg_warns    = NoWarnings,
                                 tcg_anns     = [],
                                 tcg_insts    = [],
@@ -85,7 +88,7 @@ mkGbl env mod = do dfuns_var         <- newIORef emptyNameSet
                                 tcg_keep     = keep_var,
                                 tcg_doc_hdr  = Nothing,
                                 tcg_hpc      = False,
-                                
+
                                 tcg_ev_binds = panic "tcg_ev_bind",
                                 tcg_sigs = panic "tcg_sigs",
                                 tcg_imp_specs = panic "tcg_imp_specs",
@@ -99,13 +102,13 @@ runScope env lmod = do let modinfo = mkModule mainPackageId $ mkModuleName "Main
                        lcl <- mkLcl
 
                        -- (rn_imports, rdr_env, _, _) <- initTcRnIf 'a' env gbl lcl $ checkNoErrs $ rnImports imports
-                                                                 
+
                        (gbl', group') <- initTcRnIf 'a' env gbl lcl $ do
                          (group, _) <- findSplice decls
                          rnSrcDecls group
                        (tydecls', _) <- initTcRnIf 'a' env gbl' lcl $ rnTyClDecls [ltycldecls]
                        return (error "Unsupported: imports", concat tydecls', group')
-                              
+
     where mod = unLoc lmod
           imports = hsmodImports mod
           decls = hsmodDecls mod
@@ -113,4 +116,4 @@ runScope env lmod = do let modinfo = mkModule mainPackageId $ mkModuleName "Main
           ltycldecls = map (\ (L loc (TyClD decl)) -> L loc decl) tycldecls
           isTyDecl (TyClD _) = True
           isTyDecl _ = False
-       
+

@@ -1,23 +1,23 @@
 module Main where
 
-import Tandoori.GHC    
-import Tandoori.GHC.Parse
-import Tandoori.GHC.Scope
+import           Tandoori.GHC
+import           Tandoori.GHC.Parse
+import           Tandoori.GHC.Scope
 
-import GHC    
-import Outputable
-import IOEnv
+import           GHC
+import           IOEnv
+import           Outputable
 
-import System.Environment    
-    
-import Tandoori.Typing.Infer
-import Tandoori.Typing.Show
-    
+import           System.Environment
+
+import           Tandoori.Typing.Infer
+import           Tandoori.Typing.Show
+
 typecheckMod mod = runDyn $ do
                      env <- getSession
                      (limports, ltydecls, group) <- liftIO $ runScope env mod
                      return $ infer (map unLoc ltydecls) group
-                                                                    
+
 main' [src_filename] = do mod <- parseMod src_filename
                           (c, errors) <- typecheckMod mod
                           if not(null errors)
@@ -28,7 +28,7 @@ main' [src_filename] = do mod <- parseMod src_filename
                             Nothing -> return ()
                           return c
 
-main' _ = error "Usage: tandoori filename.hs" 
+main' _ = error "Usage: tandoori filename.hs"
 
 main = do args <- getArgs
           main' args
