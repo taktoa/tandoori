@@ -25,13 +25,14 @@ library
                       , mtl          == 2.2.*
                       , sexp         == 0.7.*
                       , boxes        == 0.1.*
-                      , MaybeT       == 0.1.*
                       , ghc-paths    == 0.1.*
     default-language:   Haskell2010
     exposed-modules:    Tandoori
                         Tandoori.Supply
                         Tandoori.GHC
-                        Tandoori.GHC.Internals Tandoori.GHC.Parse Tandoori.GHC.Scope
+                        Tandoori.GHC.Internals
+                        Tandoori.GHC.Parse
+                        Tandoori.GHC.Scope
                         Tandoori.Typing
                         Tandoori.Typing.ClassDecl
                         Tandoori.Typing.Ctxt
@@ -48,6 +49,7 @@ library
                         Tandoori.Typing.Substitute
                         Tandoori.Typing.Unify
                         Tandoori.Typing.UnifyPred
+                        Control.Monad.Maybe
     ghc-options:        -Wall
     hs-source-dirs:     library
     default-extensions: OverloadedStrings
