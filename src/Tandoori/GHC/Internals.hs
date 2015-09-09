@@ -1,20 +1,21 @@
-module Tandoori.GHC.Internals
-    (module SrcLoc,
-     module Outputable,
-     module Name,
-     module BasicTypes,
-     module Unique,
-     module FastString,
-     module HsExpr,
-     module HsTypes,
-     module HsPat,
-     module HsLit,
-     module HsBinds,
-     module DataCon,
-     module TysWiredIn,
-     module PrelNames,
-     module HsDecls,
-     module Module) where
+-- | Re-exports many modules
+module Tandoori.GHC.Internals ( module SrcLoc
+                              , module Outputable
+                              , module Name
+                              , module BasicTypes
+                              , module Unique
+                              , module FastString
+                              , module HsExpr
+                              , module HsTypes
+                              , module HsPat
+                              , module HsLit
+                              , module HsBinds
+                              , module DataCon
+                              , module TysWiredIn
+                              , module PrelNames
+                              , module HsDecls
+                              , module Module
+                              ) where
 
 import           BasicTypes
 import           DataCon    (dataConName)
