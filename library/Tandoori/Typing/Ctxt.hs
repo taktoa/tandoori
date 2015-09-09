@@ -1,39 +1,54 @@
 {-# LANGUAGE NamedFieldPuns #-}
-module Tandoori.Typing.Ctxt (Ctxt, mkCtxt,
-                             monoVars, addMonoVars,
-                             polyVars, getPolyVar, addPolyVars,
-                             userDecls, getUserDecl, addUserDecls) where
 
-import           Tandoori
+-- | Type contexts
+module Tandoori.Typing.Context ( Context
+                               , mkContext
+                               , monoVars
+                               , addMonoVars
+                               , polyVars
+                               , getPolyVar
+                               , addPolyVars
+                               , userDecls
+                               , getUserDecl
+                               , addUserDecls
+                               ) where
+
+import           Tandoori.Aliases
 import           Tandoori.GHC.Internals  (Located)
 import           Tandoori.Typing
 import           Tandoori.Typing.MonoEnv
 
 import           Data.Map                (Map)
-import qualified Data.Map                as Map
 import           Data.Set                (Set)
-import qualified Data.Set                as Set
 
-data Ctxt = Ctxt { monoVars  :: Set VarName,
-                   polyVars  :: Map VarName (MonoEnv, Ty),
-                   userDecls :: Map VarName (Located PolyTy) }
+import qualified Data.Map                as M
+import qualified Data.Set                as S
 
-mkCtxt :: Ctxt
-mkCtxt = Ctxt { monoVars = Set.empty,
-                polyVars = Map.empty,
-                userDecls = Map.empty }
+data Context = Context { monoVars  :: Set VarName
+                       , polyVars  :: Map VarName (MonoEnv, Ty)
+                       , userDecls :: Map VarName (Located PolyTy)
+                       }
 
-addMonoVars ctxt@Ctxt{monoVars} vars = ctxt{ monoVars = monoVars `Set.union` vars }
+mkContext :: Context
+mkContext = Context { monoVars  = S.empty
+                    , polyVars  = M.empty
+                    , userDecls = M.empty }
 
-getPolyVar :: Ctxt -> VarName -> Maybe (MonoEnv, Ty)
-getPolyVar Ctxt{polyVars} varname = Map.lookup varname polyVars
+addMonoVars ctx@(Context { monoVars }) vars
+  = ctx { monoVars = monoVars `S.union` vars }
 
-addPolyVars :: Ctxt -> [(VarName, (MonoEnv, Ty))] -> Ctxt
-addPolyVars ctxt@Ctxt{polyVars} vars = ctxt{ polyVars = polyVars `Map.union` (Map.fromList vars) }
+addPolyVars :: Context -> [(VarName, (MonoEnv, Ty))] -> Context
+addPolyVars ctx@(Context { polyVars }) vars
+  = ctx { polyVars = polyVars `M.union` M.fromList vars }
 
-getUserDecl :: Ctxt -> VarName -> Maybe (Located PolyTy)
-getUserDecl Ctxt{userDecls} varname = Map.lookup varname userDecls
+getPolyVar :: Context -> VarName -> Maybe (MonoEnv, Ty)
+getPolyVar (Context { polyVars }) varname = M.lookup varname polyVars
 
-addUserDecls :: Ctxt -> [(VarName, Located PolyTy)] -> Ctxt
-addUserDecls ctxt@Ctxt{userDecls} binds = ctxt{userDecls = foldl addDecl userDecls binds}
-    where addDecl decls (name, lσ) = Map.insert name lσ decls
+getUserDecl :: Context -> VarName -> Maybe (Located PolyTy)
+getUserDecl (Context { userDecls }) varname = M.lookup varname userDecls
+
+addUserDecls :: Context -> [(VarName, Located PolyTy)] -> Context
+addUserDecls ctx@(Context { userDecls }) binds
+  = ctx { userDecls = foldl addDecl userDecls binds }
+
+addDecl decls (name, lσ) = M.insert name lσ decls
