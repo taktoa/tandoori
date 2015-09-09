@@ -4,7 +4,7 @@ version:                0.1.1
 build-type:             Simple
 cabal-version:          >= 1.10
 category:               Language
-copyright:              Copyright © 2011 Érdi Gergő <gergo@erdi.hu>
+copyright:              Copyright © 2010 Érdi Gergő <gergo@erdi.hu>
 synopsis:               Compositional type checking for Haskell 98.
 description:            Implementations of the traditional Hindley-Milner type system
                         can give poor error messages in some cases. This package
