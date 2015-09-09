@@ -23,6 +23,7 @@ library
                       , text         == 1.2.*
                       , containers   == 0.5.*
                       , mtl          == 2.2.*
+                      , sexp         == 0.7.*
                       , boxes        == 0.1.*
                       , MaybeT       == 0.1.*
                       , ghc-paths    == 0.1.*
