@@ -1,7 +1,7 @@
 module Tandoori.Typing.MonoEnv (MonoEnv, noVars, justType, setMonoSrc, getMonoSrc, getMonoTy, setMonoTy, mapMonoM, mapMonoM', getMonoVars, getMonoPreds, getMonoVar, addMonoVar, filterMonoVars, filterMonoPreds, combineMonos) where
 
 import           Prelude                hiding (mapM)
-import           Tandoori
+import           Tandoori.Aliases
 import           Tandoori.GHC.Internals (SDoc)
 import           Tandoori.Typing
 

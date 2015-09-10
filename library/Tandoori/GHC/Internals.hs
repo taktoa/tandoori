@@ -2,6 +2,7 @@
 module Tandoori.GHC.Internals ( module SrcLoc
                               , module Outputable
                               , module Name
+                              , module Type
                               , module BasicTypes
                               , module Unique
                               , module FastString
@@ -32,7 +33,9 @@ import           Outputable
 import           PrelNames  (eqClassName, fractionalClassName, numClassName,
                              ordClassName, stringTyConName)
 import           SrcLoc
+import           Type
 import           TysWiredIn (boolTyConName, charTyConName, consDataCon,
                              falseDataCon, intTyConName, listTyConName,
                              nilDataCon, trueDataCon, tupleTyCon)
 import           Unique
+

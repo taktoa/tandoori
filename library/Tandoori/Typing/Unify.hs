@@ -1,17 +1,17 @@
 module Tandoori.Typing.Unify (mgu, fitDeclTy) where
 
 import           Control.Monad.Error
-import           Tandoori
+import           Tandoori.Aliases
 import           Tandoori.Typing
 import           Tandoori.Typing.Error
 import           Tandoori.Typing.Monad
 import           Tandoori.Typing.Substitute
 
 mgu :: [(Maybe VarName, TyEq)] -> ErrorT TypingError Typing Subst
-mgu eqs = mgu' False eqs
+mgu = mgu' False
 
 fitDeclTy :: Ty -> Ty -> ErrorT TypingError Typing Subst
-fitDeclTy τDecl τ = mgu' True [(Nothing, τ :=: τDecl)]
+fitDeclTy τd τ = mgu' True [(Nothing, τ :=: τd)]
 
 data Unification  = Skip
                   | Substitute Tv Ty

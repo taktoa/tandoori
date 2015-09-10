@@ -1,10 +1,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Tandoori.Typing.Infer(infer) where
+module Tandoori.Typing.Infer (infer) where
 
-import           Tandoori
+import           Tandoori.Aliases
 import           Tandoori.Typing
 import           Tandoori.Typing.ClassDecl
-import           Tandoori.Typing.Ctxt
+import           Tandoori.Typing.Context
 import           Tandoori.Typing.DataType
 import           Tandoori.Typing.Error
 import           Tandoori.Typing.InstanceDecl
@@ -39,7 +39,7 @@ infer decls group = runTyping $ do
                             (m, vars) <- inferValBinds valbinds
                             withLSigs lsigs $ withPolyVars False m vars $ do
                               mapM_ checkLInstance (hs_instds group)
-                              askCtxt
+                              askCtx
 
     where getInstance linst = withLSrc linst $ instDecl (unLoc linst)
           checkLInstance linst = withLSrc linst $ checkInstance (unLoc linst)
@@ -212,19 +212,19 @@ checkDecl σDecl@(PolyTy ctxDecl τDecl) (m, τ) =
 withPolyVars :: Bool -> MonoEnv -> VarSet -> Typing a -> Typing (a, MonoEnv)
 withPolyVars check m xs f =
   do --trace (unwords $ "withPolyVars":(map showName $ Set.toList xs)) $ return ()
-     (ctxt, m) <- toPolyCtxt check m xs
-     res <- withCtxt ctxt f
+     (ctx, m) <- toPolyCtx check m xs
+     res <- withCtx ctx f
      return (res, m)
 
-toPolyCtxt :: Bool -> MonoEnv -> VarSet -> Typing (Ctxt, MonoEnv)
-toPolyCtxt check m xs =
+toPolyCtx :: Bool -> MonoEnv -> VarSet -> Typing (Context, MonoEnv)
+toPolyCtx check m xs =
   do let m' = filterMonoVars (\ x _ -> x `Set.notMember` xs) m
          tvsOuter = mconcat $ map (tvsOf . snd) $ getMonoVars m'
          m'' = filterMonoPreds (\ (cls, α) -> α `Set.member` tvsOuter) m'
      -- TODO: Location
      polyvars <- catMaybes <$> (mapM (toPoly m) $ Set.toList xs)
-     ctxt <- addReducedPolyVars polyvars
-     return (ctxt, m'')
+     ctx <- addReducedPolyVars polyvars
+     return (ctx, m'')
   where toPoly :: MonoEnv -> VarName -> Typing (Maybe (VarName, (MonoEnv, Ty)))
         toPoly m x =
           do let τ = fromJust $ getMonoVar m x
@@ -240,12 +240,12 @@ toPolyCtxt check m xs =
                            checkCtxAmbiguity σDecl
                       return Nothing
 
-        addReducedPolyVars :: [(VarName, (MonoEnv, Ty))] -> Typing Ctxt
+        addReducedPolyVars :: [(VarName, (MonoEnv, Ty))] -> Typing Context
         addReducedPolyVars polyvars =
-          do ctxt <- askCtxt
+          do ctx <- askCtx
              let polyvars' = map reduce polyvars
-                 ctxt' = addPolyVars ctxt polyvars'
-             return ctxt'
+                 ctx' = addPolyVars ctx polyvars'
+             return ctx'
           where reduce (x, (m, τ)) = (x, (m'', τ))
                   where tvs = tvsOf τ
                         hasOutsideVars y τ' | y `Set.member` xs = False

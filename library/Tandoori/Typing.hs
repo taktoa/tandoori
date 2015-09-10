@@ -5,7 +5,7 @@ import qualified Tandoori.GHC.Internals as GHC
 import           Control.Monad          (liftM, liftM2)
 import           Data.List              (nub)
 import           Data.Monoid
-import qualified Data.Set               as Set
+import qualified Data.Set               as S
 
 type Tv = GHC.Name
 type Con = GHC.Name
@@ -104,17 +104,18 @@ builtinDataConNames = map GHC.dataConName builtinDataCons
 builtinClassNames = [GHC.numClassName, GHC.fractionalClassName]
 
 --- Types of literals
+-- TODO(taktoa): perhaps we should be doing something with the unused SourceText
 typeOfLit :: GHC.HsLit -> Ty
-typeOfLit (GHC.HsInt _)    = tyInt
-typeOfLit (GHC.HsChar _)   = tyChar
-typeOfLit (GHC.HsString _) = tyString
+typeOfLit (GHC.HsInt    _ _) = tyInt
+typeOfLit (GHC.HsChar   _ _) = tyChar
+typeOfLit (GHC.HsString _ _) = tyString
 
-tvsOf :: Ty -> Set.Set Tv
+tvsOf :: Ty -> S.Set Tv
 tvsOf (TyCon con)   = mempty
 tvsOf (TyTuple _)   = mempty
-tvsOf (TyVar α)     = Set.singleton α
-tvsOf (TyFun τ1 τ2) = tvsOf τ1 `mappend` tvsOf τ2
-tvsOf (TyApp τ1 τ2) = tvsOf τ1 `mappend` tvsOf τ2
+tvsOf (TyVar α)     = S.singleton α
+tvsOf (TyFun τ1 τ2) = tvsOf τ1 <> tvsOf τ2
+tvsOf (TyApp τ1 τ2) = tvsOf τ1 <> tvsOf τ2
 
 --- Occurs checking
 occurs x (TyVar α)     = α == x

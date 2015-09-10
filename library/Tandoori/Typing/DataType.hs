@@ -1,6 +1,8 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Tandoori.Typing.DataType (constructorsFromDecl) where
 
-import           Tandoori
+import           Tandoori.Aliases
 import           Tandoori.GHC.Internals
 import           Tandoori.Typing
 import           Tandoori.Typing.Error
@@ -10,18 +12,18 @@ import           Tandoori.Typing.Repr
 import           Control.Monad
 
 constructorsFromDecl :: TyClDecl Name -> Typing [(ConName, Ty)]
-constructorsFromDecl decl | isDataDecl decl  = do
+constructorsFromDecl decl | isDataDecl decl = do
   let nameData = tcdName decl
-      αs = hsTyVarNames $ map unLoc $ tcdTyVars decl
-      τData = tyCurryApp $ (TyCon nameData):(map TyVar αs)
+  let αs = hsLTyVarNames $ map unLoc $ tcdTyVars decl
+  let τd = tyCurryApp $ TyCon nameData : map TyVar αs
 
-  forM (map unLoc $ tcdCons decl) $ \ con -> do
+  forM (map unLoc $ (dd_cons . tcdDataDefn) decl) $ \con -> do
     let tys = map unLoc $ hsConDeclArgTys $ con_details con
-    σArgs <- mapM fromHsType tys
-    τArgs <- forM σArgs $ \ σ -> do
-              case σ of
-                PolyTy [] τ -> return τ
-                PolyTy ctx τ -> raiseError $ InvalidCon σ
-    let τ = tyCurryFun (τArgs ++ [τData])
-    return (unLoc $ con_name con, τ)
+    ςa <- mapM fromHsType tys
+    τa <- forM ςa $ \case ς@(PolyTy []  τ) -> return τ
+                          ς@(PolyTy ctx τ) -> raiseError $ InvalidCon ς
+    let τ = tyCurryFun (τa ++ [τd])
+    return (unLoc $ head $ con_names con, τ)
 constructorsFromDecl _ = return []
+
+--tcdCons = _ . dd_cons . tcdDataDefn

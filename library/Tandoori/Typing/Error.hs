@@ -1,7 +1,7 @@
 module Tandoori.Typing.Error (ErrorLocation(..), ErrorMessage(..), TypeJudgement(..), TypingError(..), TypingErrorContent(..), ErrorContent(..)) where
 
 import           Control.Monad.Error
-import           Tandoori
+import           Tandoori.Aliases
 import           Tandoori.GHC.Internals
 import           Tandoori.Typing
 import           Tandoori.Typing.MonoEnv

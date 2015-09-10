@@ -9,10 +9,11 @@ import           FastString      (fsLit)
 import           GHC             (HsDecl (..), HsModule (..), emptyLHsBinds,
                                   emptyRnGroup, mkModule, mkModuleName)
 import           HscTypes        (HscEnv, Warnings (..), hsc_type_env_var)
-import           HsDecls         (HsGroup, LTyClDecl)
+import           HsDecls         (HsGroup (..), LTyClDecl, mkTyClGroup,
+                                  tyClGroupConcat)
 import           HsImpExp        (LImportDecl)
 import           InstEnv         (emptyInstEnv)
-import           Module          (mainPackageId)
+import           Module          (mainPackageKey)
 import           Name            (Name)
 import           NameEnv         (emptyNameEnv)
 import           NameSet         (emptyDUs, emptyNameSet)
@@ -21,7 +22,8 @@ import           Panic           (panic)
 import           RdrName         (RdrName, emptyGlobalRdrEnv, emptyLocalRdrEnv,
                                   extendLocalRdrEnvList)
 import           RnSource        (findSplice, rnSrcDecls, rnTyClDecls)
-import           SrcLoc          (Located (..), mkGeneralSrcSpan, unLoc)
+import           SrcLoc          (GenLocated (..), Located (..),
+                                  mkGeneralSrcSpan, unLoc)
 import           TcRnMonad       (TcGblEnv (..), TcLclEnv (..), initTcRnIf)
 import           TcRnTypes       (ArrowCtxt (..), RecFieldEnv (..),
                                   emptyImportAvails, topStage)
@@ -33,19 +35,32 @@ builtinNames = builtinTyNames ++ builtinDataConNames ++ builtinClassNames
 
 mkLcl = do errs_var <- newIORef (emptyBag, emptyBag)
            tvs_var  <- newIORef emptyVarSet
-           return $ TcLclEnv {
-                        tcl_errs       = errs_var,
-                        tcl_loc        = mkGeneralSrcSpan (fsLit "Top level"),
-                        tcl_ctxt       = [],
-                        tcl_rdr        = emptyLocalRdrEnv `extendLocalRdrEnvList` builtinNames,
-                        tcl_th_ctxt    = topStage,
-                        tcl_arrow_ctxt = NoArrowCtxt,
-                        tcl_env        = emptyNameEnv,
-                        tcl_tyvars     = tvs_var,
-                        tcl_lie        = panic "tcl_lie",
-                        tcl_meta       = panic "tcl_meta",
-                        tcl_untch      = panic "tcl_untch"
-                      }
+           return $ TcLclEnv { tcl_errs       = errs_var
+                             -- , tcl_loc        = mkGeneralSrcSpan (fsLit "Top level")
+                             , tcl_ctxt       = []
+                             , tcl_rdr        = emptyLocalRdrEnv `extendLocalRdrEnvList` builtinNames
+                             , tcl_th_ctxt    = topStage
+                             , tcl_arrow_ctxt = NoArrowCtxt
+                             , tcl_env        = emptyNameEnv
+                             , tcl_tyvars     = tvs_var
+                             , tcl_lie        = panic "tcl_lie"
+
+                                                -- Add:
+                                                -- tcl_tclvl :: TcLevel
+                                                -- tcl_th_bndrs :: ThBindEnv
+                                                -- tcl_bndrs :: [TcIdBinder]
+                                                -- tcl_tidy :: TidyEnv
+
+                                                -- Removed:
+                                                -- tcl_meta       = panic "tcl_meta",
+                                                -- tcl_untch      = panic "tcl_untch"
+                             }
+
+-- | This is terrible and dangerous
+-- mkRealGeneralSrcSpan :: FastString -> RealSrcSpan
+-- mkReadGeneralSrcSpan
+
+
 
 mkGbl env mod = do dfuns_var         <- newIORef emptyNameSet
                    keep_var          <- newIORef emptyNameSet
@@ -96,7 +111,7 @@ mkGbl env mod = do dfuns_var         <- newIORef emptyNameSet
                               }
 
 runScope :: HscEnv -> Located (HsModule RdrName) -> IO ([LImportDecl Name], [LTyClDecl Name], HsGroup Name)
-runScope env lmod = do let modinfo = mkModule mainPackageId $ mkModuleName "Main"
+runScope env lmod = do let modinfo = mkModule mainPackageKey $ mkModuleName "Main"
                            -- group = fst $ findSplice decls
                        gbl <- mkGbl env modinfo
                        lcl <- mkLcl
@@ -105,15 +120,15 @@ runScope env lmod = do let modinfo = mkModule mainPackageId $ mkModuleName "Main
 
                        (gbl', group') <- initTcRnIf 'a' env gbl lcl $ do
                          (group, _) <- findSplice decls
-                         rnSrcDecls group
-                       (tydecls', _) <- initTcRnIf 'a' env gbl' lcl $ rnTyClDecls [ltycldecls]
-                       return (error "Unsupported: imports", concat tydecls', group')
+                         rnSrcDecls [] group -- FIXME(taktoa): QUESTIONABLE
+                       (tydecls', _) <- initTcRnIf 'a' env gbl' lcl $ rnTyClDecls [] $ [mkTyClGroup ltycldecls]
+                       return (error "Unsupported: imports", tyClGroupConcat tydecls', group')
 
     where mod = unLoc lmod
           imports = hsmodImports mod
           decls = hsmodDecls mod
           tycldecls = filter (isTyDecl . unLoc) decls
-          ltycldecls = map (\ (L loc (TyClD decl)) -> L loc decl) tycldecls
+          ltycldecls = map (\(L loc (TyClD decl)) -> L loc decl) tycldecls
           isTyDecl (TyClD _) = True
           isTyDecl _ = False
 
