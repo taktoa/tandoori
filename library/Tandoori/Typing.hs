@@ -48,14 +48,14 @@ fromPolyTy (PolyTy ctx ty) = OverTy (fromPolyCtx ctx) ty
 
 --- Utility
 tyCurryApp :: [Ty] -> Ty
-tyCurryApp τs = foldl1 TyApp τs
+tyCurryApp = foldl1 TyApp
 
 tyUncurryApp :: Ty -> [Ty]
 tyUncurryApp (TyApp τ1 τ2) = tyUncurryApp τ1 ++ [τ2]
 tyUncurryApp τ = [τ]
 
 tyCurryFun :: [Ty] -> Ty
-tyCurryFun τs = foldr1 TyFun τs
+tyCurryFun = foldr1 TyFun
 
 ptyCurryFun :: [PolyTy] -> PolyTy
 ptyCurryFun σs = PolyTy ctx' τ'
@@ -87,8 +87,8 @@ tyBool     = TyCon GHC.boolTyConName
 tyInt      = TyCon GHC.intTyConName
 tyChar     = TyCon GHC.charTyConName
 tyString   = tyList tyChar
-tyList τ   = TyApp (TyCon GHC.listTyConName) τ
-tyTuple τs = tyCurryApp $ (TyTuple (length τs)):τs
+tyList     = TyApp (TyCon GHC.listTyConName)
+tyTuple τs = tyCurryApp $ TyTuple (length τs) : τs
 
 ptyList (PolyTy ctx ty) = PolyTy ctx $ tyList ty
 ptyTuple σs =  PolyTy ctx $ tyTuple τs
