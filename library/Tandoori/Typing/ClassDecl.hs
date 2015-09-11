@@ -41,7 +41,7 @@ classMap decls = do
   -- TODO: Check uniqueness of member names
   mapM toClassInfo $ G.vertices g
   where
-    methDecl (L l (TypeSig [L _ nm] (L _ ty) _)) = fromHsType ty >>= (nm,) . L l
+    methDecl (L l (TypeSig [L _ nm] (L _ ty) _)) = (nm,) . L l <$> fromHsType ty
     -- FIXME(taktoa): QUESTIONABLE
 
 classGraph :: [TyClDecl Name] -> Typing (G.Graph, G.Vertex -> TyClDecl Name)
@@ -57,8 +57,8 @@ classGraph decls = do
       return (decl, cls, map fst ctx)
       where
         cls = tcdName decl
-        L _ (UserTyVar α) = tcdTyVars decl
-        ctx = map (superFromPred . unLoc) $ unLoc $ tcdCtxt decl
+        [L _ (UserTyVar α)] = hsq_tvs $ tcdTyVars decl
+        ctx = map (superFromPred) $ unLoc $ tcdCtxt decl
         superFromPred val = case splitLHsClassTy_maybe val of
           Just p  -> uncurry superFromPred' $ first unLoc p
           Nothing -> error "uh, this isn't really handled"
