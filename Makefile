@@ -97,7 +97,7 @@ nix-clean:
 prof-clean:
 > @${ECHO} "prof-clean:"
 > @${ECHN} " Removing profiling tix files ... "
-> -rm -f *.tix
+> @rm -f *.tix
 > @${DONE}
 > @${ECHN} " Removing .hpc directory ... "
 > @if test -d .hpc; then rm -r .hpc; fi
