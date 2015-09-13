@@ -1,10 +1,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 module Tandoori.Typing.Monad ( ClsInfo (..)
+                             , VarSet
                              , Typing
                              , runTyping
-                             , mkTv
+                             , mkTv, mkTyVar
                              , askCtx, withCtx
+                             , tellVar, stopVars
+                             , listenVars, askSrc
+                             , orRecover, addError
                              , askCon, askClass, askSupers, askInstance
                              , askUserDecl, askPolyVar, askForcedMonoVars
                              , withCons, withClasses, withInstances

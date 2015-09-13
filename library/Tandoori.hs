@@ -25,11 +25,11 @@ main' [srcFile] = do
   mod <- parseMod srcFile
   (c, errors) <- typecheckMod mod
   if not $ null errors
-    then mapM_ (\err -> printErrs $ ppr err $ mkErrStyle neverQualify) errors
+    then mapM_ (\err -> putStrLn $ showSDocUnsafe $ ppr err) errors
     else return ()
   case c of
-    Just (ctxt, m) -> printCtxt ctxt
-    Nothing        -> return ()
+    Just (ctx, m) -> printCtx ctx
+    Nothing       -> return ()
   return c
 
 main' _ = error "Usage: tandoori <haskell-file>"
@@ -38,3 +38,4 @@ main' _ = error "Usage: tandoori <haskell-file>"
 main = do
   args <- getArgs
   main' args
+  return ()

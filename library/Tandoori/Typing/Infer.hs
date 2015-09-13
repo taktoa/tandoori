@@ -43,8 +43,7 @@ infer decls group = runTyping $ do
 
     where getInstance linst = withLSrc linst $ instDecl (unLoc linst)
           checkLInstance linst = withLSrc linst $ checkInstance (unLoc linst)
-
-          checkInstance inst@(InstDecl lty binds lsigs _)  = do
+          checkInstance inst@(ClsInstD (ClsInstDecl lty binds lsigs _ _ _))  = do
             ((cls, κ), σ) <- instDecl inst
             let PolyTy ctx τ = σ
             PolyTy ctx' τ' <- instantiatePolyTy σ
@@ -65,11 +64,11 @@ doLoc srcloc m | isGoodSrcSpan srcloc  = withLoc srcloc $ m
                | otherwise             = m
 
 typeOfOverLit :: HsOverLit Name -> Typing PolyTy
-typeOfOverLit (OverLit { ol_val = HsIsString _ }) = return $ PolyTy [] tyString
+typeOfOverLit (OverLit { ol_val = HsIsString {}}) = return $ PolyTy [] tyString
 typeOfOverLit (OverLit { ol_val = val }) =
   do α <- mkTv
      let cls = case val of
-           HsIntegral _ -> numClassName
+           HsIntegral {} -> numClassName
      -- return $ PolyTy [(cls, α)] (TyVar α)
      return $ PolyTy [] tyInt -- Comment this out to have non-polymorph integer literals
 
@@ -84,12 +83,12 @@ inferExpr (HsOverLit overlit) =
 inferExpr (HsVar name) | isDataConName name =
   do τ <- (instantiate =<< askCon name) `orRecover` mkTyVar -- TODO: constructors with predicates
      noVars ⊢ τ
-inferExpr (ExplicitList _ lexprs) =
+inferExpr (ExplicitList _ _ lexprs) =
   do (ms, τs) <- unzip <$> mapM inferLExpr lexprs
      (m, τ) <- unify ms τs
      m ⊢ tyList τ
 inferExpr (ExplicitTuple tupargs _ ) =
-  do (ms, τs) <- unzip <$> mapM inferTupArg tupargs
+  do (ms, τs) <- unzip <$> mapM (inferTupArg . unLoc) tupargs
      (m, τ) <- unify ms [tyTuple τs]
      m ⊢ τ
   where
@@ -102,7 +101,7 @@ inferExpr (HsIf _ cond thn els) =
      (mCond', _) <- unify [mCond] [τCond, tyBool]
      (m, τ) <- unify [mCond', m1, m2] [τ1, τ2]
      m ⊢ τ
-inferExpr (HsCase lexpr (MatchGroup lmatches _)) =
+inferExpr (HsCase lexpr (MG lmatches _ _ _)) =
   do (mCond, τCond) <- inferLExpr lexpr
      (ms, τs) <- unzip <$> mapM inferLMatch lmatches
      α <- mkTyVar
@@ -120,7 +119,7 @@ inferExpr (HsApp lFun lParam) =
          do -- TODO: Error reporting
             β <- mkTyVar
             m ⊢ β
-inferExpr (HsLam (MatchGroup lmatches _)) =
+inferExpr (HsLam (MG lmatches _ _ _)) =
   do (ms, τs) <- unzip <$> mapM inferLMatch lmatches
      (m, τ) <- unify ms τs
      m ⊢ τ
@@ -165,7 +164,7 @@ inferLocalBinds EmptyLocalBinds      = return (noVars, mempty)
 withLSigs lsigs f =
   do decls <- catMaybes <$> mapM fromSig lsigs
      withUserDecls decls $ f
-  where fromSig (L srcloc (TypeSig (L _ name) (L _ ty))) =
+  where fromSig (L srcloc (TypeSig [L _ name] (L _ ty) _)) =
           do σ <- fromHsType ty
              return $ Just $ (name, L srcloc σ)
         fromSig _ = return Nothing
@@ -272,7 +271,7 @@ inferBind PatBind{pat_lhs = lpat, pat_rhs = grhss} =
      src <- askSrc -- TODO
      return $ maybe m'' (setMonoSrc m'') src
 inferBind VarBind{} = error "VarBind"
-inferBind FunBind{fun_matches = MatchGroup lmatches _, fun_id = (L _ f)} =
+inferBind FunBind{fun_matches = MG lmatches _ _ _, fun_id = (L _ f)} =
   do tellVar f
      -- TODO: why not introduce new monovars per group?
      -- because each member of a group sends up its own idea of the others (in Δ), and they are unified later in the group level
@@ -283,11 +282,11 @@ inferBind FunBind{fun_matches = MatchGroup lmatches _, fun_id = (L _ f)} =
      let m' = maybe m (setMonoSrc m) src
      return $ addMonoVar m' (f, PolyTy [] τ)
 
-inferLMatch :: (LMatch Name) -> Typing (MonoEnv, Ty)
+inferLMatch :: (LMatch Name (Located TanExpr)) -> Typing (MonoEnv, Ty)
 inferLMatch lmatch = doLoc (getLoc lmatch) $ inferMatch $ unLoc lmatch
 
-inferMatch :: (Match Name) -> Typing (MonoEnv, Ty)
-inferMatch (Match lpats _ grhss) =
+inferMatch :: (Match Name (Located TanExpr)) -> Typing (MonoEnv, Ty)
+inferMatch (Match _ lpats _ grhss) =
   do ((ms, τs), vars) <- stopVars $ listenVars $ (unzip <$> mapM inferLPat lpats)
      (m, τ) <- withMonoVars vars $ inferGRhss grhss
      (m', τ') <- unify (m:ms) [tyCurryFun (τs ++ [τ])]
@@ -336,12 +335,12 @@ inferPat (ConPatIn (L _ con) details)  =
 inferPat (TuplePat lpats _ _) =
   do (ms, τs) <- unzip <$> mapM inferLPat lpats
      combineMonos ms ⊢ tyTuple τs
-inferPat (ListPat lpats _) =
+inferPat (ListPat lpats _ _) =
   do (ms, τs) <- unzip <$> mapM inferLPat lpats
      (m, τ) <- unify ms τs
      m ⊢ tyList τ
 inferPat (NPat overlit _ _) =
-  do PolyTy ctx τ <- typeOfOverLit overlit
+  do PolyTy ctx τ <- typeOfOverLit $ unLoc overlit
      noVars ⊢ τ -- TODO: preserve ctx
 
 infix 1 ⊢
