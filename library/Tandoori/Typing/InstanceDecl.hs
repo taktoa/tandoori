@@ -8,6 +8,9 @@ import           Tandoori.Typing.Error
 import           Tandoori.Typing.Monad
 import           Tandoori.Typing.Repr
 
+import           Control.Arrow
+import           Data.Maybe
+
 import           HsDecls
 
 instDecl :: InstDecl Name -> Typing ((Cls, TyCon), PolyTy)
@@ -20,4 +23,11 @@ instDecl (ClsInstD (ClsInstDecl lty binds lsigs _ _ _)) = withLSrc lty $ do
     Nothing -> raiseError InvalidInstance
     Just κ  -> return ((cls, κ), ς)
   where
-    lookupPair = map splitLHsClassTy_maybe . unLoc
+    lookupPair :: HsType Name -> Typing (Name, PolyTy)
+    lookupPair = lhsTypesToTys . getHsClassTy
+
+    lhsTypesToTys :: (Name, [LHsType Name]) -> Typing (Name, PolyTy)
+    lhsTypesToTys (n, xs) = mapM (fromHsType . unLoc) xs >>= \l -> return (n, head l)
+
+    getHsClassTy :: HsType name -> (name, [LHsType name])
+    getHsClassTy = head . maybeToList . splitHsClassTy_maybe
