@@ -11,10 +11,12 @@ import           Tandoori.Typing.Repr
 
 import           Control.Monad
 
+-- tcdTyVars :: TyClDecl name -> LHsTyVarBndrs name
+
 constructorsFromDecl :: TyClDecl Name -> Typing [(ConName, Ty)]
 constructorsFromDecl decl | isDataDecl decl = do
   let nameData = tcdName decl
-  let αs = hsLTyVarNames $ map unLoc $ tcdTyVars decl
+  let αs = hsq_kvs $ tcdTyVars decl
   let τd = tyCurryApp $ TyCon nameData : map TyVar αs
 
   forM (map unLoc $ (dd_cons . tcdDataDefn) decl) $ \con -> do
