@@ -3,6 +3,9 @@
 
 shell = '$$SHELL'
 
+CABAL2NIX = cabal2nix
+C2N_OPTIONS = --enable-profiling
+
 ECHO_CMD = echo
 
 ECHO = ${ECHO_CMD}
@@ -23,7 +26,7 @@ run:
 
 nix-shell: nix-init
 > @${ECHO} "Entering Nix shell"
-> nix-shell --command 'make dependencies && ${shell}'
+> nix-shell -j 8 --command 'make dependencies && ${shell}'
 > @make clean
 > @${ECHO} "Safely exited Nix shell"
 
@@ -36,7 +39,7 @@ build:
 configure:
 > @${ECHO} "build:"
 > @${ECHN} " Building project ... "
-> cabal configure
+> cabal configure --enable-profiling
 > @${DONE}
 
 haddock:
@@ -60,10 +63,8 @@ sandbox:
 nix-init: clean
 > @${ECHO} "nix-init:"
 > @${ECHN} " Generating shell.nix ... "
-> @cabal2nix --shell . > shell.nix;
-> @${DONE}
-> @${ECHN} " Generating default.nix ... "
-> @cabal2nix . > default.nix;
+> @${CABAL2NIX} --enable-profiling --shell . > shell.nix
+> @sed -i 's/haskellPackages/haskellngPackagesWithProf/g' shell.nix
 > @${DONE}
 
 tags:

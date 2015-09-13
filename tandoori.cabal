@@ -16,7 +16,7 @@ extra-source-files:     README.md
 license-file:           LICENSE.md
 license:                BSD3
 maintainer:             taktoa@gmail.com
-
+                        
 library
     build-depends:      base         >= 4.6 && < 5.0
                       , ghc          == 7.10.*
