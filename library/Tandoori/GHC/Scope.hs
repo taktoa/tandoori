@@ -8,6 +8,7 @@ import           FamInstEnv      (emptyFamInstEnv)
 import           FastString      (fsLit)
 import           GHC             (HsDecl (..), HsModule (..), emptyLHsBinds,
                                   emptyRnGroup, mkModule, mkModuleName)
+import           GHC.Stack       (errorWithStackTrace)
 import           HscTypes        (HscEnv, Warnings (..), hsc_type_env_var)
 import           HsDecls         (HsGroup (..), LTyClDecl, mkTyClGroup,
                                   tyClGroupConcat)
@@ -31,104 +32,94 @@ import           VarSet          (emptyVarSet)
 
 import           Tandoori.Typing
 
+panicMissing :: String -> a
+panicMissing str = errorWithStackTrace $ "Missing record field: " ++ str
+
 builtinNames = builtinTyNames ++ builtinDataConNames ++ builtinClassNames
 
-mkLcl = do errs_var <- newIORef (emptyBag, emptyBag)
-           tvs_var  <- newIORef emptyVarSet
-           return $ TcLclEnv { tcl_errs       = errs_var
-                             -- , tcl_loc        = mkGeneralSrcSpan (fsLit "Top level")
-                             , tcl_ctxt       = []
-                             , tcl_rdr        = emptyLocalRdrEnv `extendLocalRdrEnvList` builtinNames
-                             , tcl_th_ctxt    = topStage
-                             , tcl_arrow_ctxt = NoArrowCtxt
-                             , tcl_env        = emptyNameEnv
-                             , tcl_tyvars     = tvs_var
-                             , tcl_lie        = panic "tcl_lie"
+mkLcl = do
+  errs_var <- newIORef (emptyBag, emptyBag)
+  tvs_var  <- newIORef emptyVarSet
+  return $ TcLclEnv { tcl_errs       = errs_var
+                    , tcl_loc        = panicMissing  "tcl_loc"
+                                       -- mkGeneralSrcSpan (fsLit "Top level")
+                    , tcl_ctxt       = []
+                    , tcl_rdr        = emptyLocalRdrEnv `extendLocalRdrEnvList` builtinNames
+                    , tcl_th_ctxt    = topStage
+                    , tcl_arrow_ctxt = NoArrowCtxt
+                    , tcl_env        = emptyNameEnv
+                    , tcl_tyvars     = tvs_var
+                    , tcl_lie        = panicMissing "tcl_lie"
+                    , tcl_tclvl      = panicMissing "tcl_tclvl"
+                    , tcl_th_bndrs   = panicMissing "tcl_th_bndrs"
+                    , tcl_bndrs      = panicMissing "tcl_bndrs"
+                    , tcl_tidy       = panicMissing "tcl_tidy"
+                    }
 
-                                                -- Add:
-                                                -- tcl_tclvl :: TcLevel
-                                                -- tcl_th_bndrs :: ThBindEnv
-                                                -- tcl_bndrs :: [TcIdBinder]
-                                                -- tcl_tidy :: TidyEnv
-
-                                                -- Removed:
-                                                -- tcl_meta       = panic "tcl_meta",
-                                                -- tcl_untch      = panic "tcl_untch"
-                             }
-
--- | This is terrible and dangerous
--- mkRealGeneralSrcSpan :: FastString -> RealSrcSpan
--- mkReadGeneralSrcSpan
-
-
-
-mkGbl env mod = do dfuns_var         <- newIORef emptyNameSet
-                   keep_var          <- newIORef emptyNameSet
-                   used_rdrnames     <- newIORef Set.empty
-                   th_var            <- newIORef False
-                   dfun_n_var        <- newIORef emptyOccSet
-                   type_env_var      <- case hsc_type_env_var env of
-                                         Just (_mod, te_var) -> return te_var
-                                         Nothing             -> newIORef emptyNameEnv
-                   return $ TcGblEnv {
-                                tcg_mod       = mod,
-                                tcg_src       = HsSrcFile,
-                                tcg_rdr_env   = emptyGlobalRdrEnv,
-                                tcg_fix_env   = emptyNameEnv,
-                                tcg_field_env = RecFields emptyNameEnv emptyNameSet,
-                                tcg_default   = Nothing,
-                                tcg_type_env  = panic "tcg_type_env",
-                                tcg_type_env_var = type_env_var,
-                                tcg_inst_env  = emptyInstEnv,
-                                tcg_fam_inst_env  = emptyFamInstEnv,
-                                -- tcg_inst_uses = dfuns_var,
-                                tcg_th_used   = th_var,
-                                tcg_exports  = [],
-                                tcg_imports  = emptyImportAvails,
-                                tcg_used_rdrnames = used_rdrnames,
-                                tcg_dus      = emptyDUs,
-
-                                tcg_rn_imports = [],
-                                tcg_rn_exports = Just [],
-                                tcg_rn_decls   = Just emptyRnGroup,
-
-                                tcg_binds    = emptyLHsBinds,
-                                tcg_warns    = NoWarnings,
-                                tcg_anns     = [],
-                                tcg_insts    = [],
-                                tcg_fam_insts= [],
-                                tcg_rules    = [],
-                                tcg_fords    = [],
-                                tcg_dfun_n   = dfun_n_var,
-                                tcg_keep     = keep_var,
-                                tcg_doc_hdr  = Nothing,
-                                tcg_hpc      = False,
-
-                                tcg_ev_binds = panic "tcg_ev_bind",
-                                tcg_sigs = panic "tcg_sigs",
-                                tcg_imp_specs = panic "tcg_imp_specs",
-                                tcg_main = panic "tcg_main"
-                              }
+mkGbl env mod = do
+  dfuns_var     <- newIORef emptyNameSet
+  keep_var      <- newIORef emptyNameSet
+  used_rdrnames <- newIORef Set.empty
+  th_var        <- newIORef False
+  dfun_n_var    <- newIORef emptyOccSet
+  type_env_var  <- case hsc_type_env_var env of
+    Just (_mod, te_var) -> return te_var
+    Nothing             -> newIORef emptyNameEnv
+  return $ TcGblEnv { tcg_mod           = mod
+                    , tcg_src           = HsSrcFile
+                    , tcg_rdr_env       = emptyGlobalRdrEnv
+                    , tcg_fix_env       = emptyNameEnv
+                    , tcg_field_env     = RecFields emptyNameEnv emptyNameSet
+                    , tcg_default       = Nothing
+                    , tcg_type_env_var  = type_env_var
+                    , tcg_inst_env      = emptyInstEnv
+                    , tcg_fam_inst_env  = emptyFamInstEnv
+                    , tcg_th_used       = th_var
+                    , tcg_exports       = []
+                    , tcg_imports       = emptyImportAvails
+                    , tcg_used_rdrnames = used_rdrnames
+                    , tcg_dus           = emptyDUs
+                    , tcg_rn_imports    = []
+                    , tcg_rn_exports    = Just []
+                    , tcg_rn_decls      = Just emptyRnGroup
+                    , tcg_binds         = emptyLHsBinds
+                    , tcg_warns         = NoWarnings
+                    , tcg_anns          = []
+                    , tcg_insts         = []
+                    , tcg_fam_insts     = []
+                    , tcg_rules         = []
+                    , tcg_fords         = []
+                    , tcg_dfun_n        = dfun_n_var
+                    , tcg_keep          = keep_var
+                    , tcg_doc_hdr       = Nothing
+                    , tcg_hpc           = False
+                    , tcg_ev_binds      = panicMissing "tcg_ev_bind"
+                    , tcg_sigs          = panicMissing "tcg_sigs"
+                    , tcg_imp_specs     = panicMissing "tcg_imp_specs"
+                    , tcg_main          = panicMissing "tcg_main"
+                    , tcg_impl_rdr_env  = panicMissing "tcg_impl_rdr_env"
+                    , tcg_type_env      = panicMissing "tcg_type_env"
+                    }
 
 runScope :: HscEnv -> Located (HsModule RdrName) -> IO ([LImportDecl Name], [LTyClDecl Name], HsGroup Name)
-runScope env lmod = do let modinfo = mkModule mainPackageKey $ mkModuleName "Main"
-                           -- group = fst $ findSplice decls
-                       gbl <- mkGbl env modinfo
-                       lcl <- mkLcl
+runScope env lmod = do
+  let modinfo = mkModule mainPackageKey $ mkModuleName "Main"
+                -- group = fst $ findSplice decls
+  gbl <- mkGbl env modinfo
+  lcl <- mkLcl
 
-                       -- (rn_imports, rdr_env, _, _) <- initTcRnIf 'a' env gbl lcl $ checkNoErrs $ rnImports imports
+  -- (rn_imports, rdr_env, _, _) <- initTcRnIf 'a' env gbl lcl $ checkNoErrs $ rnImports imports
 
-                       (gbl', group') <- initTcRnIf 'a' env gbl lcl $ do
-                         (group, _) <- findSplice decls
-                         rnSrcDecls [] group -- FIXME(taktoa): QUESTIONABLE
-                       (tydecls', _) <- initTcRnIf 'a' env gbl' lcl $ rnTyClDecls [] $ [mkTyClGroup ltycldecls]
-                       return (error "Unsupported: imports", tyClGroupConcat tydecls', group')
-
-    where mod = unLoc lmod
-          imports = hsmodImports mod
-          decls = hsmodDecls mod
-          tycldecls = filter (isTyDecl . unLoc) decls
-          ltycldecls = map (\(L loc (TyClD decl)) -> L loc decl) tycldecls
-          isTyDecl (TyClD _) = True
-          isTyDecl _ = False
-
+  (gbl', group') <- initTcRnIf 'a' env gbl lcl $ do
+    (group, _) <- findSplice decls
+    rnSrcDecls [] group -- FIXME(taktoa): QUESTIONABLE
+  (tydecls', _) <- initTcRnIf 'a' env gbl' lcl $ rnTyClDecls [] $ [mkTyClGroup ltycldecls]
+  return (error "Unsupported: imports", tyClGroupConcat tydecls', group')
+  where
+    mod = unLoc lmod
+    imports = hsmodImports mod
+    decls = hsmodDecls mod
+    tycldecls = filter (isTyDecl . unLoc) decls
+    ltycldecls = map (\(L loc (TyClD decl)) -> L loc decl) tycldecls
+    isTyDecl (TyClD _) = True
+    isTyDecl _ = False
