@@ -27,7 +27,7 @@ library
                       , boxes        == 0.1.*
                       , ghc-paths    == 0.1.*
                       , extra        == 1.4.*
-                      , peggy        == 0.3.*
+                      , attoparsec   == 0.13.*
     default-language:   Haskell2010
     exposed-modules:    Tandoori
                         Tandoori.Supply
