@@ -1,4 +1,7 @@
-;;; -*- mode: scheme; coding: utf-8 -*-
+#!/bin/sh
+exec env guile -s $0 ${1+"$@"}
+!#
+;; -*- mode: scheme; coding: utf-8 -*-
 ;;; File: library/Tandoori/Guile/normalize.scm
 ;;
 ;;; License:
@@ -34,9 +37,14 @@
   #:use-module (ice-9 format)
   #:use-module (ice-9 match)
   #:use-module (ice-9 optargs)
+  #:use-module (ice-9 rdelim)
+  #:use-module (srfi  srfi-1)
+  #:use-module (srfi  srfi-9)
+  #:use-module (srfi  srfi-9 gnu)
   #:use-module (srfi  srfi-26)
+  #:use-module (srfi  srfi-43)
   #:use-module (oop   goops)
-  #:export     (<location>
+  #:export     (<located>
                 normalize-read
                 main))
 
@@ -46,56 +54,15 @@
        (or (zero?     value)
            (positive? value))))
 
-(define-class <collection> () (collection #:getter get))
-
-(define-method (->collection (list       <list>))
-  (make <collection> list))
-(define-method (->collection (vector     <vector>))
-  (make <collection> vector))
-(define-method (->collection (string     <string>))
-  (make <collection> string))
-(define-method (->collection (bitvector  <bitvector>))
-  (make <collection> bitvector))
-(define-method (->collection (bytevector <bytevector>))
-  (make <collection> bytevector))
-
-(define* (gcoll-dispatch collection)
-  (match collection
-    ['(_ ...)      'list]
-    [#(_ ...)      'vector]
-    [(? string? _) 'string]
-    [_             (error "generic-ref: invalid collection: ~s"
-                          collection)]))
-
-(define* (gcoll-ref collection k)
-  "Reference the @var{k}th element of a given @var{collection}."
-  (if (natural? k)
-      (match collection
-        ['(_ ...)      (list-ref   collection k)]
-        [#(_ ...)      (vector-ref collection k)]
-        [(? string? _) (string-ref collection k)]
-        [_             (error "generic-ref: invalid collection: ~s"
-                              collection)])
-      (error "generic-ref: invalid index: ~s" k)))
-
-(define* (other-map procedure collection)
+(define* (vector-map procedure vector)
   "Map a @var{procedure} over the given @var{vector}."
-  (let* ([len  (gcoll-length vector)]
-         [newv (make-gcoll len coll)]
-         [run  (λ [k] (procedure (gcoll-ref vector k)))])
+  (let* ([len (vector-length vector)]
+         [new (vector-copy   vector)]
+         [run (λ [k] (procedure (vector-ref vector k)))])
     (let loop ([i 0])
-      (vector-set! newv i (run i))
+      (vector-set! new i (run i))
       (when (< i len) (loop (+ i 1))))
-    newv))
-
-(define* (gcoll-map proc value)
-  "docstring"
-  (cond [(list? value)      (map        proc value)]
-        [(string? value)    (string-map proc value)]
-        [(vector? value)    (vector-map proc value)]
-        [(bitvector? value) '()]))
-
-
+    new))
 
 (define* (read-opt-set! option value)
   "If @var{value} is true, enable @var{option} (a quoted symbol).
@@ -104,7 +71,7 @@ If @var{value} is false, disable @var{option}. Otherwise, throw an error."
       (if value
           (read-enable  option)
           (read-disable option))
-      (error "read-opt-set!: non-boolean value")))
+      (error "Error: read-opt-set!: non-boolean value")))
 
 (define* (write-string value)
   "Write the given value to a string."
@@ -179,7 +146,7 @@ produced by running @code{(read-options)}."
                        #:r7rs-symbols     #t
                        #:case-insensitive case-insensitive
                        #:r6rs-hex-escapes r6rs-hex-escapes)])
-    (call-with-input-string string opt-read)))
+    (call-with-input-string (format #f "'(~a)" string) opt-read)))
 
 (define-class <located> (<class>)
   (line-number   #:init-keyword #:line-number
@@ -199,12 +166,95 @@ produced by running @code{(read-options)}."
        #:column-number c
        #:file-name     fn
        #:value         val)]
-    [_ (error "make-located: invalid properties")]))
+    [_ (error "Error: make-located: invalid properties")]))
+
+(define*-public (located-map proc located)
+  "docstring"
+  (make <located>
+    #:line-number   (get-line-number   located)
+    #:column-number (get-column-number located)
+    #:file-name     (get-file-name     located)
+    #:value         (proc (get-value located))))
 
 (define*-public (annotate props value)
   (if (null? props)
-      (gen-value)
+      value
       (make-located props value)))
+
+(define* (convert-located located proc)
+  "Convert a @var{located} to an s-expression, and run @var{proc} on the located
+s-expression (i.e.: the result of @code{(get-value located)})."
+  '())
+
+(define-syntax-rule (list-map proc list)
+  "Synonym for @code{map}, provided for name similarity with the other maps."
+  (map proc list))
+
+(define-syntax-rule (s++ strings ...)
+  "Synonym for @code{string-append}."
+  (string-append strings ...))
+
+(define* (oexpr->object oexpr)
+  "Convert the given @var{oexpr} to an instance of the relevant class."
+  (eval oexpr (current-module)))
+
+
+
+(define*-public (render-slot object
+                             name
+                             #:key init-keyword
+                             #:allow-other-keys)
+  "Helper function for @code{object->sexpr}."
+  (if init-keyword
+      `(,(symbol->keyword name)
+        ,(slot-ref object name))
+      '()))
+
+;; (define-method (represent-initializer (object <top>))
+;;   (let ([err (λ [e . a] (error (s++ "Error: object->oexpr: "
+;;                                     (apply format #f e a))))])
+;;     (err "not overridden for custom initializer: class = " (class-of object))))
+
+(define-method (represent-initializer (object <top>))
+  `(@type@ ,(class-of object) @literal@))
+
+(define*-public (object->oexpr object)
+  "Convert the given @var{object} to an s-expression that, when evaluated with
+GOOPS available, will return a deep copy of the given @var{object}.
+
+This is sort of like a self-evaluating representation for GOOPS objects."
+  (let* ([err              (λ [e . a] (error (s++ "Error: object->oexpr: "
+                                                  (apply format #f e a))))]
+         [cls              (class-of object)]
+         [cls-name         (class-name cls)]
+         [init-classes     (map (compose car method-specializers)
+                                (generic-function-methods initialize))]
+         [custom-init?     (λ [c] (any (cut equal? <> c) init-classes))]
+         [slots            (class-direct-slots cls)]
+         [current-mod      (current-module)]
+         [current-mod-name (module-name current-mod)]
+         [current-used     (module-uses current-mod)]
+         [env              (cons current-mod current-used)]
+         [relevant-mods    (filter (cut module-defined? <> cls-name) env)]
+         [cls-module       (match relevant-mods
+                             ['()     (err "Could not find class ~a" cls-name)]
+                             [(c . _) (module-name c)])]
+         [mod-ref          (if (equal? cls-module current-mod-name) '@@ '@)])
+    (if (custom-init? cls)
+        (represent-initializer object)
+        `(make (,mod-ref ,cls-module ,cls-name)
+           ,@(apply append
+                    (map (cut apply render-slot object <>) slots))))))
+
+(define*-public (located->sexpr value #:key [pretty #f])
+  "Replace any <located> objects with s-expressions in the given @var{value}."
+  (let ([located? (cut is-a? <> <located>)])
+    (match value
+      [(? located? l) (object->oexpr
+                       (located-map located->sexpr l))]
+      [(? list?    l) (list-map     located->sexpr l)]
+      [(? vector?  v) (vector-map   located->sexpr v)]
+      [_                           value])))
 
 (define* (or-false? pred)
   (λ [x] (if x (pred x) #t)))
@@ -234,58 +284,28 @@ produced by running @code{(read-options)}."
           [(char? value)       (ann value)]
           [(null? value)       (ann value)]
           [(vector? value)     (ann (vector-map annotate-value value))]
-          [(list? value)       (ann (map        annotate-value value))])))
+          [(list? value)       (ann (list-map   annotate-value value))])))
 
-;; (format #t "DBG: symbol  : ~s : ~s ~%" value (ann value))
-;; (format #t "DBG: string  : ~s : ~s ~%" value (ann value))
-;; (format #t "DBG: number  : ~s : ~s ~%" value (ann value))
-;; (format #t "DBG: boolean : ~s : ~s ~%" value (ann value))
-;; (format #t "DBG: char    : ~s : ~s ~%" value (ann value))
-;; (format #t "DBG: null    : ~s : ~s ~%" value (ann value))
-;; (format #t "DBG: vector  : ~s : ~s ~%" value (ann value))
-;; (format #t "DBG: list    : ~s : ~s ~%" value (ann value))
+(define*-public (read-file path)
+  "Read the file at the given @var{path} and output a string with its contents."
+  (call-with-input-file path
+    read-string
+    #:guess-encoding #t))
 
 (define*-public (read-annotate string)
   "docstring"
   (annotate-value (normalize-read string)))
 
-(define* (main #:rest args)
-  "docstring"
-  'hi)
+(define*-public (annotate-file path)
+  "Read the file at the given @var{path} and return an annotated and normalized
+s-expression corresponding to its contents."
+  ((compose located->sexpr read-annotate read-file) path))
 
-(define*-public all-classes
-  '(<%memoized> <<abort>> <<applicable-struct-vtable>>
-<<applicable-struct-with-setter-vtable>> <<arity-info>> <<binding-info>>
-<<counter>> <<debug>> <<dynref>> <<dynset>> <<dynwind>> <<fix>> <<future>>
-<<glil-bind>> <<glil-branch>> <<glil-call>> <<glil-const>> <<glil-kw-prelude>>
-<<glil-label>> <<glil-lexical>> <<glil-module>> <<glil-mv-bind>>
-<<glil-mv-call>> <<glil-opt-prelude>> <<glil-program>> <<glil-prompt>>
-<<glil-source>> <<glil-std-prelude>> <<glil-toplevel>> <<glil-unbind>>
-<<glil-void>> <<language>> <<let-values>> <<operand>> <<parameter>> <<prompt>>
-<<reference-graph>> <<repl>> <<standard-vtable>> <<toplevel-info>>
-<<trap-state>> <<trap-wrapper>> <<tree-analysis>> <<var>>
-<<variable-cache-cell>> <<vlist>> <<warning-type>> <accessor-method> <accessor>
-<applicable-struct-class> <applicable-struct-vtable>
-<applicable-struct-with-setter-vtable> <applicable-struct> <applicable>
-<arbiter> <array> <async> <bitvector> <boolean> <boot-closure> <bytevector>
-<catch-closure> <char-set-cursor> <char> <character-set> <class> <complex>
-<condition-variable> <continuation> <directory> <double-slot> <dynamic-object>
-<dynamic-state> <eval-closure> <extended-accessor>
-<extended-generic-with-setter> <extended-generic> <file-input-output-port>
-<file-input-port> <file-output-port> <file-port> <float-slot> <fluid>
-<foreign-slot> <foreign> <fraction> <frame> <generic-with-setter> <generic>
-<guardian> <hashtable> <hidden-slot> <hook> <input-output-port> <input-port>
-<int-slot> <integer> <keyword> <list> <macro> <malloc> <memoizer> <method>
-<module> <mutex> <null> <number> <objcode> <object> <opaque-slot> <output-port>
-<pair> <parameter> <port> <primitive-generic> <print-state> <procedure-class>
-<procedure> <promise> <protected-hidden-slot> <protected-opaque-slot>
-<protected-read-only-slot> <protected-slot> <random-state> <read-only-slot>
-<real> <record-type> <regexp> <scm-slot> <self-slot> <soft-input-output-port>
-<soft-input-port> <soft-output-port> <soft-port> <srcprops> <stack>
-<standard-vtable> <string-input-output-port> <string-input-port>
-<string-output-port> <string-port> <string> <symbol> <thread> <top> <unknown>
-<uvec> <vector> <vm-continuation> <vm> <void-input-output-port>
-<void-input-port> <void-output-port> <void-port> <winder>))
+(define* (main args)
+  "Main entry point for program."
+  (write (annotate-file (car args))))
+
+(main (command-line))
 
 ;; /* Local Variables:                    */
 ;; /* comment-column: 0                   */
